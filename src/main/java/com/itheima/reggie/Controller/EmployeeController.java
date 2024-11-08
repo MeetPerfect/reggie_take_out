@@ -1,10 +1,18 @@
 package com.itheima.reggie.Controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.itheima.reggie.Common.R;
 import com.itheima.reggie.Service.Impl.EmployeeService;
+import com.itheima.reggie.entity.Employee;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.DigestUtils;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * ClassName: EmployeeController
@@ -24,6 +32,54 @@ public class EmployeeController {
     @Autowired
     private EmployeeService employeeService;
 
+    /**
+     * 员工登录
+     * @param request
+     * @param employee
+     * @return
+     */
+    @PostMapping("/login")
+    public R<Employee> login(HttpServletRequest request, @RequestBody Employee employee) {
 
+        // 1.将页面提交的密码进行md5加密处理
+        String password = employee.getPassword();
+        password = DigestUtils.md5DigestAsHex(password.getBytes());
+
+        // 2.根据页面提交的用户名username查询数据库
+        LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Employee::getUsername, employee.getUsername());
+        Employee emp = employeeService.getOne(queryWrapper);
+
+        // 3.查询数据库，判断是否查询到用户
+        if (emp == null) {
+            return R.error("用户名不存在");
+        }
+
+        // 4.判断页面输入密码与数据库密码是否一致
+        if (!emp.getPassword().equals(password)) {
+            return R.error("登录失败");
+        }
+
+        // 5. 检查员工状态，如果是已禁用，返回员工已禁用结果
+        if (emp.getStatus() == 0) {
+            return R.error("用户已禁用");
+        }
+
+        // 6.登录成功
+        request.getSession().setAttribute("employee", emp.getId());
+        return R.success(emp);
+
+    }
+
+    /**
+     * 员工退出
+     * @return
+     */
+    @PostMapping("/logout")
+    public R<String> logout(HttpServletRequest request) {
+        // 清理Session中保存的当前登陆员工的id
+        request.getSession().removeAttribute("employee");
+        return R.success("退出成功");
+    }
 
 }
