@@ -88,9 +88,20 @@ public class SetmealController {
             return  setmealDto;
         }).collect(Collectors.toList());
         pageDto.setRecords(list);
-
-
         return R.success(pageDto);
 
     }
+
+    /**
+     *  删除套餐
+     * @param ids
+     * @return
+     */
+    @DeleteMapping
+    public R<String> delete(@RequestParam List<Long> ids) {
+        log.info("ids: {}", ids);
+        setmealService.removeWithDish(ids);
+        return R.success("套餐删除成功");
+    }
+
 }
